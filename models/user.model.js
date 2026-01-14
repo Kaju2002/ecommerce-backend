@@ -22,6 +22,26 @@ const userSchema = new Schema(
       required: true,
       minlength: 6,
     },
+    isAccountVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifyOtp: {
+      type: String,
+      default: "",
+    },
+    verifyOtpExpireAt: {
+      type: Number,
+      default: 0,
+    },
+    resetOtp: {
+      type: String,
+      default: "",
+    },
+    resetOtpExpireAt: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
