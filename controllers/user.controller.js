@@ -125,8 +125,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-
-//verify OTP 
+//verify OTP
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -179,6 +178,75 @@ export const verifyOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("Verify OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+// RESEND OTP
+export const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.isAccountVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Account already verified",
+      });
+    }
+
+    // Enforce 60s cooldown for OTP resend
+    const now = Date.now();
+    if (user.lastOtpSentAt && now - user.lastOtpSentAt < 60 * 1000) {
+      const secondsLeft = Math.ceil(
+        (60 * 1000 - (now - user.lastOtpSentAt)) / 1000
+      );
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${secondsLeft}s before requesting another OTP`,
+      });
+    }
+
+    const otp = String(Math.floor(1000 + Math.random() * 9000));
+
+    user.verifyOtp = otp;
+    user.verifyOtpExpireAt = now + 15 * 60 * 1000; // 15 mins
+    user.lastOtpSentAt = now;
+    await user.save();
+
+    await transporter.sendMail({
+      from: process.env.SENDER_EMAIL,
+      to: user.email,
+      subject: "Your new verification OTP",
+      html: EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp)
+        .replace("{{email}}", user.email)
+        .replace("{{name}}", user.name),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "OTP resent successfully",
+    });
+  } catch (error) {
+    console.error("Resend OTP Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",

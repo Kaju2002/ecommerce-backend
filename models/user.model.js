@@ -20,7 +20,7 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
-      minlength: 6,
+      minlength: 8,
     },
     isAccountVerified: {
       type: Boolean,
@@ -39,6 +39,10 @@ const userSchema = new Schema(
       default: "",
     },
     resetOtpExpireAt: {
+      type: Number,
+      default: 0,
+    },
+    lastOtpSentAt: {
       type: Number,
       default: 0,
     },
